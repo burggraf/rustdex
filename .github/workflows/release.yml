@@ -1,0 +1,226 @@
+name: Release RustDex Binaries
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v0.1.0)'
+        required: true
+        type: string
+      draft:
+        description: 'Create as draft release'
+        required: false
+        type: boolean
+        default: false
+      prerelease:
+        description: 'Mark as pre-release'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # macOS builds (native on macOS runners for code signing)
+          - target: aarch64-apple-darwin
+            runner: macos-latest
+            os_name: darwin
+            arch: arm64
+            ext: ''
+          - target: x86_64-apple-darwin
+            runner: macos-13
+            os_name: darwin
+            arch: amd64
+            ext: ''
+          # Linux builds (cross-compile from ubuntu)
+          - target: x86_64-unknown-linux-gnu
+            runner: ubuntu-latest
+            os_name: linux
+            arch: amd64
+            ext: ''
+          - target: aarch64-unknown-linux-gnu
+            runner: ubuntu-latest
+            os_name: linux
+            arch: arm64
+            ext: ''
+          # Windows builds (cross-compile from ubuntu)
+          - target: x86_64-pc-windows-gnu
+            runner: ubuntu-latest
+            os_name: windows
+            arch: amd64
+            ext: '.exe'
+          - target: aarch64-pc-windows-msvc
+            runner: windows-latest
+            os_name: windows
+            arch: arm64
+            ext: '.exe'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-action@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install cross-compilation tools (Linux ARM)
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+          echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+
+      - name: Install MinGW (Windows x64 from Linux)
+        if: matrix.target == 'x86_64-pc-windows-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-mingw-w64-x86-64
+
+      - name: Build binary
+        env:
+          CARGO_INCREMENTAL: 0
+        run: |
+          cargo build --release --target ${{ matrix.target }}
+          mkdir -p dist
+          cp target/${{ matrix.target }}/release/rustdex${{ matrix.ext }} dist/rustdex${{ matrix.ext }}
+
+      # macOS Code Signing and Notarization
+      - name: Import Code Signing Certificate
+        if: matrix.os_name == 'darwin'
+        env:
+          APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          # Create temporary keychain
+          KEYCHAIN_PATH=$RUNNER_TEMP/signing.keychain-db
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          # Import certificate
+          echo "$APPLE_CERTIFICATE_P12" | base64 --decode > $RUNNER_TEMP/certificate.p12
+          security import $RUNNER_TEMP/certificate.p12 \
+            -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -A \
+            -t cert \
+            -f pkcs12 \
+            -k "$KEYCHAIN_PATH"
+
+          # Set keychain as default and allow codesign access
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          # Verify certificate was imported
+          echo "Available signing identities:"
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+
+          # Clean up certificate file
+          rm -f $RUNNER_TEMP/certificate.p12
+
+      - name: Sign macOS Binary
+        if: matrix.os_name == 'darwin'
+        run: |
+          # Find the Developer ID Application identity
+          IDENTITY=$(security find-identity -v -p codesigning | grep "Developer ID Application" | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          echo "Using identity: $IDENTITY"
+
+          if [ -z "$IDENTITY" ]; then
+            echo "Error: No Developer ID Application identity found"
+            security find-identity -v -p codesigning
+            exit 1
+          fi
+
+          # Sign with Developer ID Application certificate
+          codesign --force --options runtime \
+            --sign "$IDENTITY" \
+            --timestamp \
+            dist/rustdex
+
+          # Verify signature
+          codesign --verify --verbose dist/rustdex
+          codesign -dv --verbose=4 dist/rustdex
+
+      - name: Notarize macOS Binary
+        if: matrix.os_name == 'darwin'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          # Create ZIP for notarization (notarytool requires archive)
+          cd dist
+          zip rustdex-notarize.zip rustdex
+
+          # Submit for notarization and wait
+          xcrun notarytool submit rustdex-notarize.zip \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_APP_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait
+
+          # Clean up notarization zip
+          rm -f rustdex-notarize.zip
+
+      - name: Cleanup Keychain
+        if: matrix.os_name == 'darwin' && always()
+        run: |
+          KEYCHAIN_PATH=$RUNNER_TEMP/signing.keychain-db
+          if [ -f "$KEYCHAIN_PATH" ]; then
+            security delete-keychain "$KEYCHAIN_PATH" || true
+          fi
+
+      - name: Create archive
+        run: |
+          cd dist
+          zip rustdex-${{ github.event.inputs.version }}-${{ matrix.os_name }}-${{ matrix.arch }}.zip rustdex${{ matrix.ext }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rustdex-${{ matrix.os_name }}-${{ matrix.arch }}
+          path: dist/rustdex-${{ github.event.inputs.version }}-${{ matrix.os_name }}-${{ matrix.arch }}.zip
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release
+          find artifacts -name '*.zip' -exec cp {} release/ \;
+          ls -la release/
+
+      - name: Generate checksums
+        working-directory: release
+        run: |
+          sha256sum *.zip > checksums.txt
+          cat checksums.txt
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.version }}
+          name: RustDex ${{ github.event.inputs.version }}
+          draft: ${{ github.event.inputs.draft }}
+          prerelease: ${{ github.event.inputs.prerelease }}
+          files: |
+            release/*.zip
+            release/checksums.txt
+          generate_release_notes: true

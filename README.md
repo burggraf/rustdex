@@ -76,6 +76,41 @@ rustdex watch /path/to/your/project
 
 ---
 
+## Pi Extension (pi-rustdex)
+
+For the best experience with Pi, install the official Pi extension:
+
+```bash
+pi install npm:pi-rustdex
+```
+
+### Features
+
+The Pi extension provides these tools:
+
+| Tool | Description |
+|------|-------------|
+| `rustdex_index` | Index a codebase for searching |
+| `rustdex_search` | Find symbols by exact name |
+| `rustdex_semantic` | Natural language code search |
+| `rustdex_routes` | Extract HTTP API endpoints |
+| `rustdex_list_repos` | List all indexed repositories |
+| `rustdex_read_symbol` | Read source code by byte range |
+
+### Example Usage in Pi
+
+```
+Index my project at /home/user/webapp
+
+Find the validateToken function in webapp
+
+Search for "user authentication logic" in webapp using semantic search
+
+Show me all POST routes in webapp
+```
+
+---
+
 ## Advanced Usage
 
 ### Using with AI Agents (Pi, Claude Code, Cursor)
