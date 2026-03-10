@@ -1,0 +1,124 @@
+name: Test macOS x64 Build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-macos-x64:
+    name: Test Build & Sign macOS x64
+    runs-on: macos-14
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin
+
+      - name: Build binary
+        run: |
+          cargo build --release --target x86_64-apple-darwin
+          mkdir -p dist
+          cp target/x86_64-apple-darwin/release/rustdex dist/rustdex
+          ls -lh dist/rustdex
+          file dist/rustdex
+
+      - name: Import Code Signing Certificate
+        env:
+          APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          echo "=== Importing Certificate ==="
+          
+          # Create temporary keychain
+          KEYCHAIN_PATH=$RUNNER_TEMP/signing.keychain-db
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+          
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          
+          # Import certificate
+          echo "$APPLE_CERTIFICATE_P12" | base64 --decode > $RUNNER_TEMP/certificate.p12
+          security import $RUNNER_TEMP/certificate.p12 \
+            -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -A \
+            -t cert \
+            -f pkcs12 \
+            -k "$KEYCHAIN_PATH"
+          
+          # Set keychain as default
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          
+          # Verify certificate
+          echo "=== Available Signing Identities ==="
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+          
+          # Clean up
+          rm -f $RUNNER_TEMP/certificate.p12
+
+      - name: Sign macOS Binary
+        run: |
+          echo "=== Signing Binary ==="
+          
+          IDENTITY=$(security find-identity -v -p codesigning | grep "Developer ID Application" | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          echo "Using identity: $IDENTITY"
+          
+          if [ -z "$IDENTITY" ]; then
+            echo "❌ No Developer ID Application identity found"
+            exit 1
+          fi
+          
+          codesign --force --options runtime \
+            --sign "$IDENTITY" \
+            --timestamp \
+            dist/rustdex
+          
+          echo "✅ Signed"
+
+      - name: Verify Signature
+        run: |
+          codesign --verify --verbose dist/rustdex
+          codesign -dv --verbose=4 dist/rustdex
+
+      - name: Notarize Binary
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          echo "=== Notarizing ==="
+          
+          cd dist
+          zip rustdex-notarize.zip rustdex
+          
+          xcrun notarytool submit rustdex-notarize.zip \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_APP_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait
+          
+          rm -f rustdex-notarize.zip
+          echo "✅ Notarized"
+
+      - name: Test Binary
+        run: |
+          echo "=== Testing Binary ==="
+          dist/rustdex --help
+          echo "✅ Binary runs"
+
+      - name: Cleanup Keychain
+        if: always()
+        run: |
+          KEYCHAIN_PATH=$RUNNER_TEMP/signing.keychain-db
+          if [ -f "$KEYCHAIN_PATH" ]; then
+            security delete-keychain "$KEYCHAIN_PATH" || true
+          fi
+
+      - name: Summary
+        run: echo "✅ macOS x64 build test complete"
