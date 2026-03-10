@@ -173,14 +173,15 @@ jobs:
             security delete-keychain "$KEYCHAIN_PATH" || true
           fi
 
-      - name: Create archive (Unix/Linux/macOS)
-        if: matrix.os_name != 'windows'
+      - name: Create archive (non-Windows)
+        if: matrix.runner != 'windows-latest'
         run: |
           cd dist
           zip rustdex-${{ github.event.inputs.version }}-${{ matrix.os_name }}-${{ matrix.arch }}.zip rustdex${{ matrix.ext }}
 
       - name: Create archive (Windows)
-        if: matrix.os_name == 'windows'
+        if: matrix.runner == 'windows-latest'
+        shell: pwsh
         run: |
           cd dist
           Compress-Archive -Path rustdex${{ matrix.ext }} -DestinationPath rustdex-${{ github.event.inputs.version }}-${{ matrix.os_name }}-${{ matrix.arch }}.zip
