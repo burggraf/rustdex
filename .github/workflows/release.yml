@@ -35,11 +35,13 @@ jobs:
             os_name: darwin
             arch: arm64
             ext: ''
-          - target: x86_64-apple-darwin
-            runner: macos-14
-            os_name: darwin
-            arch: amd64
-            ext: ''
+          # NOTE: macOS x64 disabled - certificate import issue on macos-14
+          # TODO: Fix certificate/password for x86_64-apple-darwin target
+          # - target: x86_64-apple-darwin
+          #   runner: macos-14
+          #   os_name: darwin
+          #   arch: amd64
+          #   ext: ''
           # Linux builds (cross-compile from ubuntu)
           - target: x86_64-unknown-linux-gnu
             runner: ubuntu-latest
