@@ -188,7 +188,7 @@ jobs:
         run: |
           echo "=== Testing Binary ==="
           chmod +x dist/rustdex
-          dist/rustdex --version
+          dist/rustdex --help
           if [ $? -eq 0 ]; then
             echo "✅ Binary runs successfully!"
           else
