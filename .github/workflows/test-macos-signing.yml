@@ -1,0 +1,221 @@
+name: Test macOS Signing
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_name:
+        description: 'Test name (optional)'
+        required: false
+        type: string
+        default: 'macos-signing-test'
+
+permissions:
+  contents: read
+
+jobs:
+  test-macos-build:
+    name: Test Build & Sign macOS ARM64
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-action@stable
+        with:
+          targets: aarch64-apple-darwin
+
+      - name: Build binary
+        run: |
+          cargo build --release --target aarch64-apple-darwin
+          mkdir -p dist
+          cp target/aarch64-apple-darwin/release/rustdex dist/rustdex
+          ls -lh dist/rustdex
+
+      - name: Check binary before signing
+        run: |
+          echo "=== Binary Info (Before Signing) ==="
+          file dist/rustdex
+          codesign --display --verbose=4 dist/rustdex 2>&1 || echo "Not signed yet (expected)"
+
+      - name: Import Code Signing Certificate
+        env:
+          APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          echo "=== Importing Certificate ==="
+          
+          # Create temporary keychain
+          KEYCHAIN_PATH=$RUNNER_TEMP/signing.keychain-db
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+          
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          
+          # Import certificate
+          echo "$APPLE_CERTIFICATE_P12" | base64 --decode > $RUNNER_TEMP/certificate.p12
+          security import $RUNNER_TEMP/certificate.p12 \
+            -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -A \
+            -t cert \
+            -f pkcs12 \
+            -k "$KEYCHAIN_PATH"
+          
+          # Set keychain as default
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          
+          # Verify certificate
+          echo "=== Available Signing Identities ==="
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+          
+          # Clean up
+          rm -f $RUNNER_TEMP/certificate.p12
+
+      - name: Sign macOS Binary
+        run: |
+          echo "=== Signing Binary ==="
+          
+          # Find the Developer ID Application identity
+          IDENTITY=$(security find-identity -v -p codesigning | grep "Developer ID Application" | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          echo "Using identity: $IDENTITY"
+          
+          if [ -z "$IDENTITY" ]; then
+            echo "❌ ERROR: No Developer ID Application identity found"
+            security find-identity -v -p codesigning
+            exit 1
+          fi
+          
+          # Sign the binary
+          codesign --force --options runtime \
+            --sign "$IDENTITY" \
+            --timestamp \
+            dist/rustdex
+          
+          echo "✅ Signing complete"
+
+      - name: Verify Signature
+        run: |
+          echo "=== Verifying Signature ==="
+          
+          # Check signature
+          codesign --verify --verbose dist/rustdex
+          if [ $? -eq 0 ]; then
+            echo "✅ Signature verified"
+          else
+            echo "❌ Signature verification failed"
+            exit 1
+          fi
+          
+          # Display signature details
+          echo ""
+          echo "=== Signature Details ==="
+          codesign -dv --verbose=4 dist/rustdex
+
+      - name: Notarize Binary
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          echo "=== Notarizing Binary ==="
+          
+          # Check if all required secrets are present
+          if [ -z "$APPLE_ID" ]; then
+            echo "❌ ERROR: APPLE_ID secret is not set"
+            exit 1
+          fi
+          
+          if [ -z "$APPLE_APP_PASSWORD" ]; then
+            echo "❌ ERROR: APPLE_APP_PASSWORD secret is not set"
+            exit 1
+          fi
+          
+          if [ -z "$APPLE_TEAM_ID" ]; then
+            echo "❌ ERROR: APPLE_TEAM_ID secret is not set"
+            exit 1
+          fi
+          
+          echo "✅ All notarization secrets present"
+          echo "Apple ID: ${APPLE_ID:0:3}...${APPLE_ID: -10}"
+          echo "Team ID: $APPLE_TEAM_ID"
+          
+          # Create ZIP for notarization
+          cd dist
+          zip rustdex-notarize.zip rustdex
+          
+          # Submit for notarization
+          echo ""
+          echo "Submitting to Apple Notary Service..."
+          xcrun notarytool submit rustdex-notarize.zip \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_APP_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait
+          
+          NOTARIZE_STATUS=$?
+          
+          # Clean up
+          rm -f rustdex-notarize.zip
+          
+          if [ $NOTARIZE_STATUS -eq 0 ]; then
+            echo "✅ Notarization successful!"
+          else
+            echo "❌ Notarization failed"
+            exit 1
+          fi
+
+      - name: Final Verification
+        run: |
+          echo "=== Final Binary Verification ==="
+          
+          # Check signature again
+          codesign --verify --verbose dist/rustdex
+          
+          # Check notarization
+          echo ""
+          echo "=== Notarization Check ==="
+          spctl --assess --type exec dist/rustdex 2>&1 || true
+          
+          # Show final binary info
+          echo ""
+          echo "=== Binary Info ==="
+          file dist/rustdex
+          ls -lh dist/rustdex
+
+      - name: Test Binary Runs
+        run: |
+          echo "=== Testing Binary ==="
+          chmod +x dist/rustdex
+          dist/rustdex --version
+          if [ $? -eq 0 ]; then
+            echo "✅ Binary runs successfully!"
+          else
+            echo "❌ Binary failed to run"
+            exit 1
+          fi
+
+      - name: Cleanup Keychain
+        if: always()
+        run: |
+          KEYCHAIN_PATH=$RUNNER_TEMP/signing.keychain-db
+          if [ -f "$KEYCHAIN_PATH" ]; then
+            security delete-keychain "$KEYCHAIN_PATH" || true
+          fi
+
+      - name: Summary
+        run: |
+          echo "========================================"
+          echo "✅ ALL TESTS PASSED"
+          echo "========================================"
+          echo ""
+          echo "The following were verified:"
+          echo "  ✓ Build succeeds"
+          echo "  ✓ Certificate imports correctly"
+          echo "  ✓ Binary is signed"
+          echo "  ✓ Signature is valid"
+          echo "  ✓ Notarization succeeds"
+          echo "  ✓ Binary runs"
+          echo ""
+          echo "You're ready for a full release!"
