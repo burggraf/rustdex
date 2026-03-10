@@ -36,7 +36,7 @@ jobs:
             arch: arm64
             ext: ''
           - target: x86_64-apple-darwin
-            runner: macos-13
+            runner: macos-12
             os_name: darwin
             arch: amd64
             ext: ''
