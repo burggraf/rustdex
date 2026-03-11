@@ -42,29 +42,56 @@ RustDex supports a wide range of programming languages:
 To start using RustDex, you first need to index your codebase. This creates a local SQLite database containing symbol metadata and vector embeddings.
 
 ```bash
+# Basic indexing
 rustdex index /path/to/your/project --name my-project
+
+# Get JSON output with symbol count
+rustdex index /path/to/your/project --name my-project --json
 ```
 *Note: If `--name` is omitted, the folder name will be used.*
+
+**JSON Output Example:**
+```json
+{
+  "name": "my-project",
+  "root_path": "/path/to/your/project",
+  "db_path": "~/.rustdex/my-project.db",
+  "last_indexed": "2026-03-11T16:45:20.126182",
+  "symbol_count": 1543
+}
+```
 
 ### 2. Searching for Symbols
 Locate a function or class by its name across the repo.
 
 ```bash
+# Text output
 rustdex search "validate_user" --repo my-project
+
+# JSON output
+rustdex search "validate_user" --repo my-project --json
 ```
 
 ### 3. Semantic Search (Natural Language)
 If you don't know the exact function name, you can search using natural language.
 
 ```bash
+# Text output
 rustdex semantic "how do we handle password hashing" --repo my-project
+
+# JSON output
+rustdex semantic "how do we handle password hashing" --repo my-project --json
 ```
 
 ### 4. Exploring API Routes
 Find all HTTP routes defined in your project (supports Flask, FastAPI, Django, and Express).
 
 ```bash
-rustdex routes my-project --method POST
+# All routes (text)
+rustdex routes my-project
+
+# POST routes only (JSON)
+rustdex routes my-project --method POST --json
 ```
 
 ### 5. Keeping the Index Fresh
@@ -72,6 +99,17 @@ Run the watch command in a terminal to automatically update the index whenever y
 
 ```bash
 rustdex watch /path/to/your/project
+```
+
+### 6. Listing Repositories
+View all your indexed repositories.
+
+```bash
+# Text output
+rustdex list-repos
+
+# JSON output
+rustdex list-repos --json
 ```
 
 ---
@@ -117,16 +155,41 @@ Show me all POST routes in webapp
 RustDex is designed to be called by AI agents to reduce token consumption. Instead of the agent reading full files, it calls RustDex to find the exact byte range of a symbol.
 
 **JSON Output:**
-Add the `--json` flag to any search command to get machine-readable output.
+Add the `--json` flag to any command to get machine-readable output:
 ```bash
-rustdex search "AuthStore" --json
+# Index with JSON output
+rustdex index /path/to/project --name my-project --json
+
+# Search with JSON output
+rustdex search "AuthStore" --repo my-project --json
+
+# List repos with JSON output
+rustdex list-repos --json
+
+# Routes with JSON output
+rustdex routes my-project --json
 ```
 
 ### Management
-- **List all indexed repos**: `rustdex list-repos`
+- **List all indexed repos**: `rustdex list-repos` or `rustdex list-repos --json`
+- **Check version**: `rustdex --version` or `rustdex -V`
 - **Storage Location**: All data is stored in `~/.rustdex/`.
   - `registry.db`: Tracks all projects and their paths.
   - `<repo_name>.db`: Contains the actual index for each project.
+
+---
+
+## Changelog
+
+### v0.2.0 (Latest)
+- Added `--version` / `-V` flag to display version information
+- Added `--json` support to `index` and `list-repos` commands
+- Added `symbol_count` field to indexing output
+- Progress output suppressed when `--json` flag is used
+- Improved JSON consistency across all commands
+
+### v0.1.0
+- Initial release with symbol indexing, semantic search, and route extraction
 
 ---
 

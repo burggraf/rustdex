@@ -38,6 +38,8 @@ pub struct RepoInfo {
     pub root_path: PathBuf,
     pub db_path: PathBuf,
     pub last_indexed: Option<NaiveDateTime>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub symbol_count: Option<usize>,
 }
 
 #[derive(Clone)]
@@ -171,6 +173,7 @@ impl Storage {
                 root_path: PathBuf::from(row.get::<_, String>(1)?),
                 db_path: PathBuf::from(row.get::<_, String>(2)?),
                 last_indexed: last_indexed.and_then(|s| NaiveDateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S").ok()),
+                symbol_count: None,
             })
         })?;
 
@@ -191,6 +194,7 @@ impl Storage {
                 root_path: PathBuf::from(row.get::<_, String>(1)?),
                 db_path: PathBuf::from(row.get::<_, String>(2)?),
                 last_indexed: last_indexed.and_then(|s: String| NaiveDateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S").ok()),
+                symbol_count: None,
             })
         })?;
 

@@ -25,7 +25,7 @@ impl Indexer {
         })
     }
 
-    pub fn index_folder(&mut self, path: &Path, name: Option<String>) -> Result<RepoInfo> {
+    pub fn index_folder(&mut self, path: &Path, name: Option<String>, json: bool) -> Result<RepoInfo> {
         let path = fs::canonicalize(path)?;
         let repo_name = name.unwrap_or_else(|| {
             path.file_name().unwrap().to_string_lossy().to_string()
@@ -37,6 +37,7 @@ impl Indexer {
         let mut repo_info = RepoInfo {
             name: repo_name.clone(),
             root_path: path.clone(),
+            symbol_count: None,
             db_path: db_path.clone(),
             last_indexed: None,
         };
@@ -77,7 +78,9 @@ impl Indexer {
                     }
                 }
 
-                println!("Indexing {}...", rel_path);
+                if !json {
+                    println!("Indexing {}...", rel_path);
+                }
 
                 // Delete old records for this file
                 conn.execute("DELETE FROM symbols WHERE repo = ? AND file = ?", params![repo_name, rel_path])?;
@@ -107,7 +110,9 @@ impl Indexer {
 
                     // Generate embedding
                     if self.embedding_engine.is_none() {
-                        println!("Loading embedding engine...");
+                        if !json {
+                            println!("Loading embedding engine...");
+                        }
                         self.embedding_engine = Some(EmbeddingEngine::new()?);
                     }
                     if let Some(engine) = &self.embedding_engine {
@@ -145,7 +150,10 @@ impl Indexer {
             }
         }
 
-        println!("Indexed {} symbols.", symbol_count);
+        if !json {
+            println!("Indexed {} symbols.", symbol_count);
+        }
+        repo_info.symbol_count = Some(symbol_count);
         repo_info.last_indexed = Some(chrono::Utc::now().naive_utc());
 
         Ok(repo_info)

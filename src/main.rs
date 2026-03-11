@@ -13,6 +13,7 @@ mod watcher;
 
 #[derive(Parser)]
 #[command(name = "rustdex")]
+#[command(version)]
 #[command(about = "Universal code-indexer for AI agents (Rust version)", long_about = None)]
 struct Cli {
     #[command(subcommand)]
@@ -28,6 +29,9 @@ enum Commands {
         /// Optional name for the repo (defaults to folder name)
         #[arg(short, long)]
         name: Option<String>,
+        /// Output results as JSON
+        #[arg(long)]
+        json: bool,
     },
     /// Search for symbols by name
     Search {
@@ -83,7 +87,11 @@ enum Commands {
         path: String,
     },
     /// List all indexed repositories
-    ListRepos,
+    ListRepos {
+        /// Output results as JSON
+        #[arg(long)]
+        json: bool,
+    },
     // Mcp,
 }
 
@@ -94,10 +102,14 @@ async fn main() -> Result<()> {
     let storage = storage::Storage::new()?;
 
     match cli.command {
-        Commands::Index { path, name } => {
+        Commands::Index { path, name, json } => {
             let mut indexer = indexer::Indexer::new(storage)?;
-            let info = indexer.index_folder(std::path::Path::new(&path), name)?;
-            println!("Finished indexing repo: {}", info.name);
+            let info = indexer.index_folder(std::path::Path::new(&path), name, json)?;
+            if json {
+                println!("{}", serde_json::to_string(&info)?);
+            } else {
+                println!("Finished indexing repo: {}", info.name);
+            }
         }
         Commands::Search { query, repo, kind, limit, json } => {
             let searcher = search::Searcher::new(storage)?;
@@ -160,15 +172,19 @@ async fn main() -> Result<()> {
             println!("Watching {} for changes...", path);
             watcher::watch_folder(std::path::Path::new(&path), storage)?;
         }
-        Commands::ListRepos => {
+        Commands::ListRepos { json } => {
             let repos = storage.list_repos()?;
-            for repo in repos {
-                println!(
-                    "{} - {} (indexed: {:?})",
-                    repo.name,
-                    repo.root_path.display(),
-                    repo.last_indexed
-                );
+            if json {
+                println!("{}", serde_json::to_string(&repos)?);
+            } else {
+                for repo in repos {
+                    println!(
+                        "{} - {} (indexed: {:?})",
+                        repo.name,
+                        repo.root_path.display(),
+                        repo.last_indexed
+                    );
+                }
             }
         }
     }

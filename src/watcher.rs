@@ -18,7 +18,7 @@ pub fn watch_folder(path: &Path, storage: Storage) -> Result<()> {
                     println!("Change detected: {:?}", event.paths);
                     // In a real implementation, we would throttle and re-index only the changed files
                     // For now, just re-index the whole folder
-                    let _ = indexer.index_folder(path, None);
+                    let _ = indexer.index_folder(path, None, false);
                 }
             }
             Err(e) => println!("watch error: {:?}", e),
