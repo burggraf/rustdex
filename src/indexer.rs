@@ -58,7 +58,7 @@ impl Indexer {
             // Third-party code
             "third_party", "third-party",
             // Git worktrees
-            ".worktree",
+            ".worktree", ".worktrees",
         ];
         let skip_exts = vec![".pyc", ".so", ".dylib", ".dll", ".exe", ".bin", ".png", ".jpg", ".db", ".sqlite"];
 
@@ -67,8 +67,11 @@ impl Indexer {
         for entry in WalkDir::new(&path)
             .into_iter()
             .filter_entry(|e| {
-                let name = e.file_name().to_string_lossy();
-                !skip_dirs.contains(&name.as_ref())
+                // Check if any component of the path matches skip_dirs
+                e.path().components().all(|c| {
+                    let name = c.as_os_str().to_string_lossy();
+                    !skip_dirs.contains(&name.as_ref())
+                })
             })
         {
             let entry = entry?;
