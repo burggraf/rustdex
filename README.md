@@ -177,11 +177,35 @@ rustdex routes my-project --json
   - `registry.db`: Tracks all projects and their paths.
   - `<repo_name>.db`: Contains the actual index for each project.
 
+### Excluded Directories
+The indexer automatically skips common directories that don't contain source code:
+
+| Category | Excluded Directories |
+|----------|---------------------|
+| Version Control | `.git`, `.svn`, `.hg`, `.bzr` |
+| Package Managers | `node_modules`, `bower_components`, `jspm_packages` |
+| Python | `__pycache__`, `venv`, `.venv`, `.tox`, `.eggs`, `.mypy_cache`, `.pytest_cache`, `.ruff_cache` |
+| Rust/Go/PHP | `target`, `vendor`, `third_party`, `third-party` |
+| Build Outputs | `dist`, `build` |
+| Git Worktrees | `.worktree` |
+
+**Excluded file extensions:** `.pyc`, `.so`, `.dylib`, `.dll`, `.exe`, `.bin`, `.png`, `.jpg`, `.db`, `.sqlite`
+
 ---
 
 ## Changelog
 
-### v0.2.0 (Latest)
+### v0.3.0 (Latest)
+- Expanded list of excluded directories for indexing:
+  - **Version control**: `.git`, `.svn`, `.hg`, `.bzr`
+  - **Package managers**: `node_modules`, `bower_components`, `jspm_packages`
+  - **Python environments**: `__pycache__`, `venv`, `.venv`, `.tox`, `.eggs`, `.mypy_cache`, `.pytest_cache`, `.ruff_cache`
+  - **Go/PHP vendor**: `vendor`, `third_party`, `third-party`
+  - **Build outputs**: `dist`, `build`, `target`
+  - **Git worktrees**: `.worktree`
+- File extensions excluded: `.pyc`, `.so`, `.dylib`, `.dll`, `.exe`, `.bin`, `.png`, `.jpg`, `.db`, `.sqlite`
+
+### v0.2.0
 - Added `--version` / `-V` flag to display version information
 - Added `--json` support to `index` and `list-repos` commands
 - Added `symbol_count` field to indexing output

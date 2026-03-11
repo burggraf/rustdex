@@ -44,7 +44,22 @@ impl Indexer {
 
         self.storage.register_repo(&repo_info)?;
 
-        let skip_dirs = vec![".git", "node_modules", "__pycache__", "venv", ".venv", "target"];
+        let skip_dirs = vec![
+            // Version control
+            ".git", ".svn", ".hg", ".bzr",
+            // Package managers
+            "node_modules", "bower_components", "jspm_packages",
+            // Python
+            "__pycache__", "venv", ".venv", ".tox", ".eggs", ".mypy_cache", ".pytest_cache", ".ruff_cache",
+            // Rust / Go
+            "target", "vendor",
+            // Build outputs
+            "dist", "build",
+            // Third-party code
+            "third_party", "third-party",
+            // Git worktrees
+            ".worktree",
+        ];
         let skip_exts = vec![".pyc", ".so", ".dylib", ".dll", ".exe", ".bin", ".png", ".jpg", ".db", ".sqlite"];
 
         let mut symbol_count = 0;
