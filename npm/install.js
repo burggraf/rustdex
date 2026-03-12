@@ -56,7 +56,7 @@ function getPlatformInfo() {
 }
 
 function getDownloadUrl(platformKey, version) {
-  const fileName = `rustdex-${version}-${platformKey}.zip`;
+  const fileName = `rustdex-v${version}-${platformKey}.zip`;
   return `https://github.com/${GITHUB_REPO}/releases/download/v${version}/${fileName}`;
 }
 

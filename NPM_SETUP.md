@@ -64,12 +64,12 @@ Or manually trigger via the API/UI.
 ### 3. Verify Release Assets
 
 Make sure these files exist in your GitHub release:
-- `rustdex-0.4.0-darwin-arm64.zip`
-- `rustdex-0.4.0-darwin-x64.zip`
-- `rustdex-0.4.0-linux-arm64.zip`
-- `rustdex-0.4.0-linux-amd64.zip`
-- `rustdex-0.4.0-windows-arm64.zip`
-- `rustdex-0.4.0-windows-amd64.zip`
+- `rustdex-v0.4.0-darwin-arm64.zip`
+- `rustdex-v0.4.0-darwin-x64.zip`
+- `rustdex-v0.4.0-linux-arm64.zip`
+- `rustdex-v0.4.0-linux-amd64.zip`
+- `rustdex-v0.4.0-windows-arm64.zip`
+- `rustdex-v0.4.0-windows-amd64.zip`
 
 ## Publishing to npm
 
