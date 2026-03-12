@@ -1,0 +1,40 @@
+{
+  "name": "rustdex",
+  "version": "0.4.0",
+  "description": "A high-performance, universal code-indexer and semantic search tool built in Rust",
+  "main": "index.js",
+  "bin": {
+    "rustdex": "bin/rustdex"
+  },
+  "scripts": {
+    "postinstall": "node install.js",
+    "preuninstall": "node uninstall.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/burggraf/rustdex.git"
+  },
+  "keywords": [
+    "code-search",
+    "semantic-search",
+    "code-indexing",
+    "rust",
+    "developer-tools",
+    "cli",
+    "ast",
+    "tree-sitter"
+  ],
+  "author": "Mark Burggraf <markb@mantisbible.com>",
+  "license": "MIT",
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "engines": {
+    "node": ">=14"
+  },
+  "optionalDependencies": {
+    "adm-zip": "^0.5.10"
+  }
+}

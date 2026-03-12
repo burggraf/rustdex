@@ -22,6 +22,18 @@ RustDex supports a wide range of programming languages:
 
 ## Installation
 
+### npm (Recommended - Easiest)
+The easiest way to install RustDex on any platform:
+
+```bash
+npm install -g rustdex
+```
+
+This automatically downloads the appropriate binary for your platform (macOS, Linux, or Windows) and installs it to your PATH. Supports:
+- macOS: Apple Silicon (ARM64) and Intel (x64)
+- Linux: ARM64 and AMD64
+- Windows: ARM64 and AMD64
+
 ### From Source
 1. Ensure you have the [Rust toolchain](https://rustup.rs/) installed.
 2. Clone the repository and build:
@@ -33,6 +45,13 @@ RustDex supports a wide range of programming languages:
    ```bash
    cp target/release/rustdex /usr/local/bin/
    ```
+
+### Cargo Install
+If you already have Rust installed:
+
+```bash
+cargo install rustdex --locked
+```
 
 ---
 
@@ -195,7 +214,14 @@ The indexer automatically skips common directories that don't contain source cod
 
 ## Changelog
 
-### v0.3.0 (Latest)
+### v0.4.0 (Latest)
+- npm package distribution - install with `npm install -g rustdex`
+- Automatic platform detection and binary download
+- Cross-platform binary support: macOS, Linux, Windows
+- Automated binary packaging via GitHub Actions
+- Interactive publishing helper script
+
+### v0.3.0
 - Expanded list of excluded directories for indexing:
   - **Version control**: `.git`, `.svn`, `.hg`, `.bzr`
   - **Package managers**: `node_modules`, `bower_components`, `jspm_packages`

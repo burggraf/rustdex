@@ -1,1 +1,7 @@
 /target
+
+# npm build artifacts
+npm/.tmp*
+npm/bin/rustdex
+npm/bin/rustdex.exe
+npm/bin/rustdex.cmd

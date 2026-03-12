@@ -1,0 +1,37 @@
+# Exclude Rust source files
+Cargo.toml
+Cargo.lock
+src/
+target/
+.git/
+.gitignore
+.github/
+copy-secrets.sh
+
+# Exclude test data
+test_repo/
+
+# Exclude docs that are in the main repo
+README.md
+CHANGELOG.md
+
+# Exclude npm-specific files (except what we need)
+npm/
+.npmrc
+
+# Exclude IDE files
+.vscode/
+.idea/
+*.iml
+
+# Exclude OS files
+.DS_Store
+Thumbs.db
+
+# Include only what we need for the npm package
+!npm/package.json
+!npm/install.js
+!npm/uninstall.js
+!npm/index.js
+!npm/bin/rustdex
+!npm/README.md

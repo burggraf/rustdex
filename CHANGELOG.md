@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.4.0 - 2026-03-12
+
+### Added
+- npm package distribution - users can now install with `npm install -g rustdex`
+- Automatic platform detection and binary download during npm installation
+- Cross-platform binary support: macOS (ARM64/x64), Linux (ARM64/AMD64), Windows (ARM64/AMD64)
+- Automated binary packaging via GitHub Actions with code-signed macOS binaries
+- npm uninstall cleanup script
+- Interactive publishing helper script (`publish-npm.sh`)
+
+### Changed
+- Updated installation documentation with npm as the recommended method
+- Improved user experience for easy installation across all platforms
+
 ## 0.3.0 - 2026-03-11
 
 ### Added
