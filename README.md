@@ -2,6 +2,10 @@
 
 RustDex is a high-performance, universal code-indexer and semantic search tool built in Rust. It allows AI agents and developers to navigate large codebases instantly by providing exact symbol locations and natural language search capabilities, all while running 100% locally.
 
+## Acknowledgments
+
+This project is based on the excellent work at [SymDex](https://github.com/husnainpk/SymDex). While RustDex is a complete rewrite in Rust, it builds upon the core concepts and ideas pioneered by SymDex.
+
 ## Features
 
 - **Symbol Indexing**: Extract functions, classes, and methods with exact byte offsets using Tree-sitter.
