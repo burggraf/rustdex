@@ -214,7 +214,11 @@ The indexer automatically skips common directories that don't contain source cod
 
 ## Changelog
 
-### v0.4.0 (Latest)
+### v0.4.1 (Latest)
+- Fixed npm installer to correctly download release files with "v" prefix
+- npm package distribution working correctly
+
+### v0.4.0
 - npm package distribution - install with `npm install -g rustdex`
 - Automatic platform detection and binary download
 - Cross-platform binary support: macOS, Linux, Windows

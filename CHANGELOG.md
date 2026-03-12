@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.1 - 2026-03-12
+
+### Fixed
+- Fixed npm installer - now correctly downloads release files with "v" prefix (e.g., rustdex-v0.4.1-darwin-arm64.zip)
+- GitHub release workflow creates files with "v" prefix, which installer now expects
+
 ## 0.4.0 - 2026-03-12
 
 ### Added
