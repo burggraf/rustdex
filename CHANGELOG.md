@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.2 - 2026-03-15
+
+### Fixed
+- Fixed UTF-8 encoding errors when indexing files with invalid UTF-8 sequences
+- Replaced `fs::read_to_string()` with `fs::read()` + `String::from_utf8_lossy()` to handle binary files and files with invalid UTF-8 bytes gracefully
+- Fixes "stream did not contain valid UTF-8" error that could occur when indexing certain files
+
 ## 0.4.1 - 2026-03-12
 
 ### Fixed
