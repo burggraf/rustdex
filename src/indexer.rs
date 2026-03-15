@@ -83,7 +83,10 @@ impl Indexer {
                 }
 
                 let rel_path = file_path.strip_prefix(&path)?.to_string_lossy().to_string();
-                let source = fs::read_to_string(file_path)?;
+                
+                // Read file bytes and convert to string, replacing invalid UTF-8 sequences
+                let bytes = fs::read(file_path)?;
+                let source = String::from_utf8_lossy(&bytes).to_string();
                 let file_hash = calculate_hash(&source);
 
                 // Check if already indexed and unchanged
