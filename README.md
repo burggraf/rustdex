@@ -50,12 +50,14 @@ This automatically downloads the appropriate binary for your platform (macOS, Li
    cp target/release/rustdex /usr/local/bin/
    ```
 
-### Cargo Install
-If you already have Rust installed:
+### Cargo Install (From Git)
+If you already have Rust installed, you can install directly from the GitHub repository:
 
 ```bash
-cargo install rustdex --locked
+cargo install --git https://github.com/burggraf/rustdex
 ```
+
+> **Note:** Do not use `cargo install rustdex` — that points to an unrelated project on crates.io. This tool must be installed from the GitHub repository or via npm.
 
 ---
 
