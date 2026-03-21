@@ -29,6 +29,10 @@ enum Commands {
         /// Optional name for the repo (defaults to folder name)
         #[arg(short, long)]
         name: Option<String>,
+        /// Ignore patterns (can be used multiple times, .gitignore syntax)
+        /// Example: --ignore "dist/" --ignore "*.min.js"
+        #[arg(short, long)]
+        ignore: Vec<String>,
         /// Output results as JSON
         #[arg(long)]
         json: bool,
@@ -102,9 +106,9 @@ async fn main() -> Result<()> {
     let storage = storage::Storage::new()?;
 
     match cli.command {
-        Commands::Index { path, name, json } => {
+        Commands::Index { path, name, ignore, json } => {
             let mut indexer = indexer::Indexer::new(storage)?;
-            let info = indexer.index_folder(std::path::Path::new(&path), name, json)?;
+            let info = indexer.index_folder(std::path::Path::new(&path), name, ignore, json)?;
             if json {
                 println!("{}", serde_json::to_string(&info)?);
             } else {

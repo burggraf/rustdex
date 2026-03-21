@@ -75,6 +75,33 @@ rustdex index /path/to/your/project --name my-project --json
 ```
 *Note: If `--name` is omitted, the folder name will be used.*
 
+#### Ignoring Files and Folders
+
+RustDex automatically respects `.gitignore` files in your project. You can also create a `.rustdexignore` file in the root of your project with additional patterns:
+
+```bash
+# .rustdexignore example
+dist/
+*.min.js
+*.generated.*
+coverage/
+```
+
+You can also specify ignore patterns on the command line:
+
+```bash
+# Ignore specific patterns via CLI
+rustdex index /path/to/project --ignore "dist/" --ignore "*.test.ts"
+
+# Combine CLI patterns with .gitignore and .rustdexignore
+rustdex index /path/to/project --ignore "*.stories.tsx" --ignore "e2e/"
+```
+
+Ignore patterns use standard `.gitignore` syntax:
+- `*.log` - ignore all files ending in `.log`
+- `dist/` - ignore the `dist` directory
+- `!important.log` - negate a previous ignore (include this file)
+
 **JSON Output Example:**
 ```json
 {
@@ -202,25 +229,35 @@ rustdex routes my-project --json
   - `registry.db`: Tracks all projects and their paths.
   - `<repo_name>.db`: Contains the actual index for each project.
 
-### Excluded Directories
-The indexer automatically skips common directories that don't contain source code:
+### Excluded Directories & Files
 
-| Category | Excluded Directories |
-|----------|---------------------|
-| Version Control | `.git`, `.svn`, `.hg`, `.bzr` |
-| Package Managers | `node_modules`, `bower_components`, `jspm_packages` |
-| Python | `__pycache__`, `venv`, `.venv`, `.tox`, `.eggs`, `.mypy_cache`, `.pytest_cache`, `.ruff_cache` |
-| Rust/Go/PHP | `target`, `vendor`, `third_party`, `third-party` |
-| Build Outputs | `dist`, `build` |
-| Git Worktrees | `.worktree` |
+RustDex uses a layered ignore system:
 
-**Excluded file extensions:** `.pyc`, `.so`, `.dylib`, `.dll`, `.exe`, `.bin`, `.png`, `.jpg`, `.db`, `.sqlite`
+1. **Automatic ignores**: Respects `.gitignore`, `.git/info/exclude`, and global gitignore settings
+2. **Custom ignore file**: Create a `.rustdexignore` file in your project root with additional patterns
+3. **CLI patterns**: Use `--ignore` flags for one-off exclusions
+
+**Default ignored directories** (via `.gitignore` support):
+- Version control: `.git`, `.svn`, `.hg`, `.bzr`
+- Package managers: `node_modules`, `bower_components`, `jspm_packages`
+- Python: `__pycache__`, `venv`, `.venv`, `.tox`, `.eggs`, `.mypy_cache`, `.pytest_cache`, `.ruff_cache`
+- Rust/Go/PHP: `target`, `vendor`, `third_party`, `third-party`
+- Build outputs: `dist`, `build`
+- Git worktrees: `.worktree`
+
+**Excluded file extensions:** `.pyc`, `.so`, `.dylib`, `.dll`, `.exe`, `.bin`, `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.db`, `.sqlite`, `.pdf`, `.zip`, `.tar`, `.gz`, `.mp3`, `.mp4`, `.mov`, `.avi`, `.wav`, `.ico`, `.ttf`, `.woff`, `.woff2`, `.eot`, `.otf`
 
 ---
 
 ## Changelog
 
-### v0.4.1 (Latest)
+### v0.4.3 (Latest)
+- **Custom ignore patterns**: Added `.rustdexignore` file support for project-specific ignore patterns
+- **CLI ignore flag**: Added `--ignore` flag to specify ignore patterns on the command line
+- **Gitignore support**: Now automatically respects `.gitignore`, `.git/info/exclude`, and global gitignore
+- Improved binary/file extension filtering during indexing
+
+### v0.4.1
 - Fixed npm installer to correctly download release files with "v" prefix
 - npm package distribution working correctly
 

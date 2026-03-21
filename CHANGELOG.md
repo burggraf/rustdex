@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.4.3 - 2026-03-21
+
+### Added
+- **Custom ignore file support**: Create a `.rustdexignore` file in your project root with gitignore-style patterns
+- **CLI ignore flag**: Use `--ignore` (or `-i`) to specify ignore patterns on the command line
+  - Example: `rustdex index . --ignore "dist/" --ignore "*.min.js"`
+- **Gitignore integration**: Now automatically respects `.gitignore`, `.git/info/exclude`, and global gitignore settings
+
+### Changed
+- Replaced hardcoded skip directories with proper ignore system using the `ignore` crate
+- Improved binary/file extension filtering with expanded list of binary types
+
 ## 0.4.2 - 2026-03-15
 
 ### Fixed
